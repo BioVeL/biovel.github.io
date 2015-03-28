@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <title>Test results</title>
+
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript" src="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.window.MessageBox',
+]);
+    </script>
+
+    <!-- It is necessary to use a local copy of pmrpc to get this working with MSIE! -->
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['External test']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+       var overallPanel = Ext.create('Ext.panel.Panel', {
+         title: 'Do you want to run 10-fold cross validation?',
+         height: 54,
+         width: 500,
+         layout: {
+          type: 'hbox',
+          align: 'stretch',
+          padding: 5
+         },
+         renderTo: Ext.getBody(),
+         dockedItems: [{
+                dock : 'bottom',
+                xtype: 'toolbar',
+                items: [{
+                    text: 'Yes',
+                    handler: function(){
+                                pmrpc.call({
+                                destination : "publish",
+                                publicProcedureName : "reply",
+                                params : ["OK",
+                                          {'answer' : 'OK'}],
+                                onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                                onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                                });
+                        }
+                    },
+                    {
+                    text: 'No',
+                    handler: function(){
+                                pmrpc.call({
+                                destination : "publish",
+                                publicProcedureName : "reply",
+                                params : ["Cancelled", {}],
+                                onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                                onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                                });
+                        }
+                    }]
+            }]});
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+</body>
+</html>

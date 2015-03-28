@@ -1,0 +1,272 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="cache-control" content="no-cache, no-store, max-age=0, must-revalidate" />
+<meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="expires" content="Fri, 01 Jan 1990 00:00:00 GMT" />
+    <title>Test results</title>
+
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript" src="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.tree.*',
+    'Ext.data.*',
+    'Ext.chart.*',
+    'Ext.data.NodeInterface',
+    'Ext.window.MessageBox',
+    'Ext.DomQuery'
+]);
+    </script>
+
+    <!-- It is necessary to use a local copy of pmrpc to get this working with MSIE! -->
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+var parseXml;
+
+if (typeof window.DOMParser != "undefined") {
+    parseXml = function(xmlStr) {
+        return ( new window.DOMParser() ).parseFromString(xmlStr, "text/xml");
+    };
+} else if (typeof window.ActiveXObject != "undefined" &&
+       new window.ActiveXObject("Microsoft.XMLDOM")) {
+         parseXml = function(xmlStr) {
+            var xmlDoc = new window.ActiveXObject("Microsoft.XMLDOM");
+            xmlDoc.async = "false";
+            xmlDoc.loadXML(xmlStr);
+            return xmlDoc;
+         };
+} else {
+    throw new Error("No XML parser found");
+}
+
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['Internal test results']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+       // remove namespace prefixes to avoid parsing/querying problems
+       // (namespace prefixes can be present or not and if present can have different values,
+       // additionally, since we are receiving a piece of XML, it may not even contain the
+       // namespace prefix declaration!)
+       var clean_xml = retVal.returnValue.xmltext.replace(/<(\/?)([^:>\s]*:)?([^>]+)>/g, "<$1$3>");
+       var rootElement =  parseXml(clean_xml).documentElement;
+       var confusionMatrix = Ext.DomQuery.selectNode('ConfusionMatrix', rootElement);
+       var entries = [];
+       var name = '';
+       var val = '';
+       var no_absences = false;
+       for (var i = 0; i < confusionMatrix.attributes.length; i++) {
+         name = confusionMatrix.attributes[i].name;
+         val = confusionMatrix.attributes[i].value;
+         if (name == 'OmissionError' || name == 'Accuracy') {
+             val = parseFloat(val).toFixed(2).toString()+'%';
+         }
+         if (name == 'CommissionError') {
+           if (val == '-100') {
+             no_absences = true;
+             val = '-';
+           }
+           else {
+             val = parseFloat(val).toFixed(2).toString()+'%';
+           }
+         }
+         if ( (name == 'TrueNegatives' || name == 'FalseNegatives') && no_absences) {
+           continue;
+         }
+         entries.push({ 'name' : name,
+                        'value' : val});
+       }
+       var store = Ext.create('Ext.data.Store', {
+         storeId:'confusionStore',
+         fields:['name', 'value'],
+         data:{'items': entries},
+        proxy: {
+          type: 'memory',
+          reader: {
+            type: 'json',
+            root: 'items'
+          }
+        }
+       });
+       var gridPanel = Ext.create('Ext.grid.Panel', {
+            title: 'Confusion matrix',
+            columns: [ {header: 'Name', dataIndex: 'name'},
+                       {header: 'Value', dataIndex: 'value'}],
+            width : 400,
+            height : 525,
+            bodyPadding: 10,
+            autoScroll: true,
+            store: Ext.data.StoreManager.lookup('confusionStore')
+         }
+       );
+
+       var rocCurve = Ext.DomQuery.selectNode('RocCurve', rootElement);
+       var auc = rocCurve.attributes['Auc'].value;
+       auc = parseFloat(auc).toFixed(2).toString();
+       var rocCurveData = rocCurve.attributes['Points'].value.split(' ');
+       Ext.define('RocPoint', {
+         extend: 'Ext.data.Model',
+         fields: ['x', 'y']
+       });
+       
+       var curveData = [];
+       for (var i = 0; i < rocCurveData.length; i = i + 2) {
+         curveData.push({x : rocCurveData[i] * 100,
+                         y : rocCurveData[i + 1] * 100});
+       }
+
+       var curveStore = Ext.create('Ext.data.Store', {
+         model : 'RocPoint',
+         data : curveData
+       });
+
+       var chart = Ext.create('Ext.chart.Chart', {
+         width: 435,
+         height: 435,
+         store: curveStore,
+		 theme: 'Green',
+         axes: [
+           {
+             title: 'False Positive Rate (1-Specificity)',
+			 labelTitle:{
+				   fill: 'black',     
+				   font: 'bold 13px Arial' 
+			 },
+             type: 'Numeric',
+             position: 'bottom',
+             fields: ['x'],
+             minimum: 0,
+             maximum: 100,
+             label: {
+                    renderer: function(value) {
+                        return value/100.0;
+                    }
+                }
+           },
+           {
+             title: 'True Positive Rate (Sensitivity)',
+			 labelTitle:{
+				   fill: 'black',     
+				   font: 'bold 13px Arial' 
+			 },
+             type: 'Numeric',
+             position: 'left',
+             fields: ['y'],
+             minimum: 0,
+             maximum: 100,
+             label: {
+                    renderer: function(value) {
+                        return value/100.0;
+                    }
+                }
+          }],
+          series: [
+			{
+			type: 'line',
+			axis: ['left', 'bottom'],
+			fill: true,
+			xField: 'x',
+			yField: 'y',
+			tips: {
+                    trackMouse: true,
+                    width: 80,
+                    height: 40,
+                    renderer: function(storeItem, item) {
+                        this.setTitle('FPR: ' + (storeItem.get('x')/100).toFixed(4) + '<br />TPR: ' + (storeItem.get('y')/100).toFixed(4));
+                    }
+                },
+			}
+		]	
+       });
+       var chartPanel = Ext.create('Ext.panel.Panel', {
+         title: 'ROC Curve (AUC='+auc+')',
+         //width: 400,
+         //height: 400,
+         items: [chart]});
+       gridPanel.flex = 1;
+       var overallPanel = Ext.create('Ext.panel.Panel', {
+         title: 'Internal test results',
+         height: 528,
+         width: 700,
+         autoscroll: true,
+         layout: {
+          type: 'hbox',
+          align: 'stretch',
+          padding: 5
+         },
+         renderTo: Ext.getBody(),
+         items: [{items:[gridPanel], flex:1}, {items:[chartPanel], flex:2}],
+         dockedItems: [{
+                dock : 'bottom',
+                xtype: 'toolbar',
+                items: [{
+                    text: 'Continue',
+                    cls:'x-btn-default-small',
+                    border: 1,
+                    style: {
+                       borderColor: '#000066',
+                       borderStyle: 'solid'
+                    },
+                    handler: function(){
+                                pmrpc.call({
+                                destination : "publish",
+                                publicProcedureName : "reply",
+                                params : ["OK",
+                                          {'answer' : 'OK'}],
+                                onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                                onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                                });
+                        }
+                    },
+                    {
+                    text: 'Abort',
+                    cls:'x-btn-default-small',
+                    border: 1,
+                    style: {
+                       borderColor: '#000066',
+                       borderStyle: 'solid'
+                    },
+                    handler: function(){
+                                pmrpc.call({
+                                destination : "publish",
+                                publicProcedureName : "reply",
+                                params : ["Cancelled", {}],
+                                onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                                onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                                });
+                        }
+                    }]
+            }]});
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+</body>
+</html>

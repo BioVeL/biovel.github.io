@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<omws:createModel xmlns:omws="http://openmodeller.cria.org.br/ws/2.0" xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"  SOAP-ENV:encodingStyle="http://xml.apache.org/xml-soap/literalxml">
+<ModelParameters xmlns="http://openmodeller.cria.org.br/xml/2.0">
+<Sampler>
+<Environment>
+</Environment>
+<Presence Label="BioVeL species">
+<CoordinateSystem>GEOGCS["WGS84", DATUM["WGS84", SPHEROID["WGS84", 6378137.0, 298.257223563]], PRIMEM["Greenwich", 0.0], UNIT["degree", 0.017453292519943295], AXIS["Longitude",EAST], AXIS["Latitude",NORTH]]</CoordinateSystem>
+</Presence>
+</Sampler>
+</ModelParameters>
+</omws:createModel>

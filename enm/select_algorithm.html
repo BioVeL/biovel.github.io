@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta http-equiv="cache-control" content="no-cache, no-store, max-age=0, must-revalidate" />
+<meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="expires" content="Fri, 01 Jan 1990 00:00:00 GMT" />
+     <title>Algorithm Selection</title>
+
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript" src="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.tree.*',
+    'Ext.data.*',
+    'Ext.data.NodeInterface',
+    'Ext.window.MessageBox',
+    'Ext.DomQuery'
+]);
+    </script>
+
+    <!-- It is necessary to use a local copy of pmrpc to get this working with MSIE! -->
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+
+var parseXml;
+var parsedData;
+var firstId;
+
+if (typeof window.DOMParser != "undefined") {
+    parseXml = function(xmlStr) {
+        return ( new window.DOMParser() ).parseFromString(xmlStr,
+    "text/xml");
+    };
+} else if (typeof window.ActiveXObject != "undefined" &&
+       new window.ActiveXObject("Microsoft.XMLDOM")) {
+    parseXml = function(xmlStr) {
+        var xmlDoc = new window.ActiveXObject("Microsoft.XMLDOM");
+        xmlDoc.async = "false";
+        xmlDoc.loadXML(xmlStr);
+        return xmlDoc;
+    };
+} else {
+    throw new Error("No XML parser found");
+}
+
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+function getDetailLine(label, text) {
+
+    return '<tr><td valign="top"><b>' + label + '</b>&nbsp;</td><td><p>' + text + '</p></td></tr>';
+}
+
+function selectAlg(algId) {
+    var panel = Ext.getCmp('detail_panel');
+    var alg = Ext.DomQuery.selectNode('Algorithm[@Id='+algId+']', parsedData);
+    var name = Ext.DomQuery.selectNode('Name', alg).textContent;
+    var desc = Ext.DomQuery.selectNode('Description', alg).textContent;
+    var bib = Ext.DomQuery.selectNode('Bibliography', alg).textContent;
+    var dev = Ext.DomQuery.selectNode('Developer', alg);
+    var des = Ext.DomQuery.selectNode('Designer', alg);
+    var html = '<div class="body-wrap">';
+    html += '<table>';
+    html += getDetailLine( 'Version', alg.attributes['Version'].value );
+    html += getDetailLine( 'Description', desc );
+    html += getDetailLine( 'Author(s)', des.attributes['Name'].value );
+    if (bib.length) {
+      html += getDetailLine( 'Bibliography', bib );
+    }
+    html += getDetailLine( 'Developer(s)', dev.attributes['Name'].value );
+    html += '</table>';
+    html += '</div>';
+    panel.setTitle( name );
+    panel.update( html );
+}
+
+function readInputValues() {
+  pmrpc.call({
+    destination: 'publish',
+    publicProcedureName: 'setTitle',
+    params: ['Select algorithm']
+  });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+      var algorithms = [];
+      // remove namespace prefixes to avoid parsing/querying problems
+      // (namespace prefixes can be present or not and if present can have different values,
+      // additionally, since we are receiving a piece of XML, it may not even contain the
+      // namespace prefix declaration!)
+      var alg_xml = retVal.returnValue.xmltext[0].replace(/<(\/?)([^:>\s]*:)?([^>]+)>/g, "<$1$3>");
+      parsedData = parseXml(alg_xml);
+      var algs = parsedData.getElementsByTagName('Algorithm');
+      var n = 0;
+      for (var i = 0; i < algs.length; i++) {
+        var alg_name = Ext.DomQuery.selectNode('Name', algs[i]).textContent;
+        var alg_id = algs[i].attributes['Id'].value;
+        if (alg_id == 'AQUAMAPS') {
+          // Skip Aquamaps since the layer selection interface doesn't 
+          // allow to establish an order for the layers, and the current order is
+          // different than the one needed by the algorithm.
+          continue;
+        }
+        if (n == 0) {
+          algorithms.push({ boxLabel: alg_name, name: 'rb', inputValue: alg_id, checked: true});
+          firstId = alg_id;
+        } else {
+          algorithms.push({ boxLabel: alg_name, name: 'rb', inputValue: alg_id});
+        }
+        ++n;
+      }
+      var group = {
+          id: 'algradios',
+          xtype: 'radiogroup',
+          columns: 1,
+          vertical: true,
+          items: algorithms,
+          listeners: {
+            change: function(radiogroup, newVal, oldVal, opts) {
+              // This event is triggered twice each time a new option is selected.
+              // The first time two options are marked (the old and the new one),
+              // so we can skip this by checking if rb is an array.
+              // The second time only the new option is marked, and this is what we need.
+              if (!Ext.isArray(newVal.rb)) {
+                selectAlg(newVal.rb);
+              }
+	    }
+          }
+        }
+      var algListPanel = new Ext.form.Panel({
+        id: 'list_panel',
+        title: 'Available algorithms',
+        width: 400,
+        autoHeight: true,
+        bodyPadding: 10,
+        autoScroll: true,
+        region:'west',
+        items:[group],
+        dockedItems: [{
+            dock : 'bottom',
+            xtype: 'toolbar',
+            items: {
+            text: 'Continue',
+            cls:'x-btn-default-small',
+            border: 1,
+            style: {
+               borderColor: '#000066',
+               borderStyle: 'solid'
+            },
+            handler: function(){
+                    pmrpc.call({
+                    destination : "publish",
+                    publicProcedureName : "reply",
+                    params : ["OK",
+                              {"algorithm_id" : algListPanel.getForm().getValues().rb}],
+                    onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                    onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                    });
+            }
+            }
+	    }]
+      });
+      var algDetailPanel = {
+                id: 'detail_panel',
+                title: 'Algorithm details',
+                layout: 'card',
+                region:'center',
+                bodyPadding: 10,
+                autoScroll: true,
+                html: '',
+                listeners: {
+                beforerender: function(panel, opts) {
+                    selectAlg(firstId);
+	          }
+	        }
+      };
+      var viewport = Ext.create('Ext.container.Viewport', {
+          id: 'viewport',
+          layout: 'border',
+          padding: 10,
+          items: [algListPanel, algDetailPanel]
+      });
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+  });
+};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="cache-control" content="no-cache, no-store, max-age=0, must-revalidate" />
+<meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="expires" content="Fri, 01 Jan 1990 00:00:00 GMT" />
+    <title>Set algorithm parameters</title>
+
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/examples/shared/example.css" />
+
+<style type="text/css">
+.icon-help{background-image:url(http://biovel.googlecode.com/svn/trunk/enm/workflows/native_and_2050_with_interaction/pages/help.png) !important;background-repeat:no-repeat;background-position:center;}
+</style>
+
+    <script type="text/javascript" src="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.tree.*',
+    'Ext.data.*',
+    'Ext.data.NodeInterface',
+    'Ext.window.MessageBox',
+    'Ext.DomQuery'
+]);
+    </script>
+
+    <!-- It is necessary to use a local copy of pmrpc to get this working with MSIE! -->
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+// Custom code to display help text near form fields
+// reference: http://www.learnsomethings.com/2012/03/16/extjs4-x-plugin-that-adds-a-help-icon-and-rich-tooltip-to-your-field-labels/
+Ext.QuickTips.init();
+
+helpQtip = function(txt) {
+return {
+init: function(me) {
+	var label = me.fieldLabel;
+	var xt    = me.getXType().substr(4);
+	if (xt == 'field' || xt == 'obox'){
+        // Add in custom onRender and on Destroy events
+	var id  = me.getId(), lbl = me.getFieldLabel();
+    // Get the fieldLabel element
+    Ext.apply( me,{
+    render: Ext.Function.createSequence(me.render,function(ct, position) {
+        var domNode = Ext.DomQuery.select('*[id=' + id + '-labelEl]');
+            if(domNode){
+                var tipTxt = '<b>Help</b><br><p>' + txt + '</p>';
+                var tipWdth = domNode[0].offsetWidth * 2;
+                // Create the dom object that contains the question mark image
+                var helpDiv = {
+                    tag:'div',
+                    id:id + '-help',
+                    html:'&nbsp;',
+                    cls:'icon-help',
+                    style:'display:inline;cursor:help;width:25px;float:right;padding:1px 1px 5px 1px;'
+                    } // End var helpDiv
+                // Add the help div to the document
+                Ext.DomHelper.append(domNode[0],helpDiv);
+                // Attach the help tool tip to the help div
+                var tip = Ext.create('Ext.tip.ToolTip', {
+                    target:id + '-help',
+                    html: tipTxt,
+                    minWidth:tipWdth,
+                    title:lbl,
+                    autoHide:false,
+                    closable:true,
+                    closeAction:'hide'
+                });
+	  }// End of if(domNode)
+	}), // End of render Sequence
+	destroy:  Ext.Function.createSequence(me.destroy,function() {
+		var helpDomNode = Ext.DomQuery.select('*[id=' + id + '-help]');
+		if(helpDomNode){
+			Ext.removeNode(helpDomNode);
+		}
+	}) // End of Destroy Sequence
+	})// End of Ext.apply
+	}// End of if (xt == 'field')
+}// End Init Function
+};
+};
+
+var parseXml;
+
+if (typeof window.DOMParser != "undefined") {
+    parseXml = function(xmlStr) {
+        return ( new window.DOMParser() ).parseFromString(xmlStr,
+    "text/xml");
+    };
+} else if (typeof window.ActiveXObject != "undefined" &&
+       new window.ActiveXObject("Microsoft.XMLDOM")) {
+    parseXml = function(xmlStr) {
+        var xmlDoc = new window.ActiveXObject("Microsoft.XMLDOM");
+        xmlDoc.async = "false";
+        xmlDoc.loadXML(xmlStr);
+        return xmlDoc;
+    };
+} else {
+    throw new Error("No XML parser found");
+}
+
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+function readInputValues() {
+  pmrpc.call({
+    destination: 'publish',
+    publicProcedureName: 'setTitle',
+    params: ['Set parameters']
+  });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+      var entries = [];
+      var ids = [];
+      var param_list = retVal.returnValue.xml_list;
+      for (var i = 0; i < param_list.length; i++) {
+          // remove namespace prefixes to avoid parsing/querying problems
+          // (namespace prefixes can be present or not and if present can have different values,
+          // additionally, since we are receiving a piece of XML, it may not even contain the
+          // namespace prefix declaration!)
+          var clean_xml = param_list[i].replace(/<(\/?)([^:>\s]*:)?([^>]+)>/g, "<$1$3>");
+          var parsed_param = parseXml(clean_xml);
+          var param_id = Ext.DomQuery.selectValue('Parameter@Id', parsed_param);
+          ids.push(param_id);
+          var param_name = Ext.DomQuery.selectValue('Parameter/Name', parsed_param);
+          var param_default = Ext.DomQuery.selectValue('Parameter/Default', parsed_param);
+          var param_description = Ext.DomQuery.selectValue('Parameter/Description', parsed_param);
+	  entries.push({ xtype: 'textfield', name: param_id, fieldLabel: param_name, allowBlank: false, value: param_default, labelWidth: 300, width: 700, plugins: [new helpQtip(param_description)]});
+      }
+      var formPanel = Ext.create('Ext.form.Panel', {
+        title: 'Algorithm parameter values',
+        width: 800,
+        height: 525,
+        bodyPadding: 10,
+        renderTo: Ext.getBody(),
+        autoScroll: true,
+        items:entries,
+	 dockedItems: [{
+            dock : 'bottom',
+            xtype: 'toolbar',
+            items: {
+	    text: 'Continue',
+            cls:'x-btn-default-small',
+            border: 1,
+            style: {
+               borderColor: '#000066',
+               borderStyle: 'solid'
+            },
+	    handler: function(){
+                    var newValues = [];
+                    var formValues = formPanel.getForm().getValues();
+                    for (var i = 0; i < ids.length; i++) {
+		      newValues.push(formValues[ids[i]]);
+                    }
+                    pmrpc.call({
+                    destination : "publish",
+                    publicProcedureName : "reply",
+                    params : ["OK",                             
+                              {"values" : newValues}],
+                    onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                    onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                    });
+            }
+            }
+	    }]
+      });
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+</body>
+</html>

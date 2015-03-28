@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<omws:projectModel xmlns:omws="http://openmodeller.cria.org.br/ws/2.0" xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" SOAP-ENV:encodingStyle="http://xml.apache.org/xml-soap/literalxml">
+<ProjectionParameters xmlns="http://openmodeller.cria.org.br/xml/2.0">
+<Environment>
+</Environment>
+<OutputParameters FileType="GreyTiff">
+</OutputParameters>
+</ProjectionParameters>
+</omws:projectModel>

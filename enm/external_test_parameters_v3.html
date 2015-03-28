@@ -1,0 +1,271 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <title>Test results</title>
+
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript" src="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.window.MessageBox',
+]);
+    </script>
+
+    <!-- It is necessary to use a local copy of pmrpc to get this working with MSIE! -->
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['External test']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+     var choices = [];
+     choices.push({ boxLabel: 'Cross validation', name: 'rb', inputValue: 'xval', checked: false});
+     choices.push({ boxLabel: 'Skip external test', name: 'rb', inputValue: 'skip', checked: true});
+     var choices_ctrl = {
+          id: 'choices_ctrl',
+          xtype: 'radiogroup',
+          columns: 1,
+          vertical: true,
+          items: choices,
+          listeners: {
+            change: function(obj, value) {
+              // check if cross validation was clicked
+              if (value.rb == 'xval') {
+                Ext.getCmp('replicates').setVisible(true);
+                Ext.getCmp('measure_auc').setVisible(true);
+                var matrix = Ext.getCmp('calculate_matrix');
+                matrix.setVisible(true);
+                var threshold = Ext.getCmp('threshold');
+                if (matrix.value) {
+                  threshold.setVisible(true);
+                  if (threshold.value == "fixed") {
+                    Ext.getCmp('fixed_threshold').setVisible(true);
+                  }
+                  else {
+                    Ext.getCmp('fixed_threshold').setVisible(false);
+                  }
+                }
+                else {
+                  threshold.setVisible(false);
+                  Ext.getCmp('fixed_threshold').setVisible(false);
+                }
+              }
+	      else {
+                Ext.getCmp('replicates').setVisible(false);
+                Ext.getCmp('measure_auc').setVisible(false);
+                Ext.getCmp('calculate_matrix').setVisible(false);
+                Ext.getCmp('threshold').setVisible(false);
+                Ext.getCmp('fixed_threshold').setVisible(false);
+	      }
+            },
+            beforeRender: function() {
+                Ext.getCmp('replicates').setVisible(false);
+                Ext.getCmp('measure_auc').setVisible(false);
+                Ext.getCmp('calculate_matrix').setVisible(false);
+                Ext.getCmp('threshold').setVisible(false);
+                Ext.getCmp('fixed_threshold').setVisible(false);
+            },
+          }
+    }
+     var choicePanel = new Ext.form.Panel({
+        id: 'choice_panel',
+        title: 'Choose an option for external testing',
+        width: 400,
+        autoHeight: true,
+        bodyPadding: 10,
+        autoScroll: true,
+        region:'west',
+        items:[choices_ctrl],
+        dockedItems: [{
+            dock : 'bottom',
+            xtype: 'toolbar',
+            items: {
+                text: 'Continue',
+                cls:'x-btn-default-small',
+                border: 1,
+                style: {
+                   borderColor: '#000066',
+                   borderStyle: 'solid'
+                },
+                handler: function(){
+                        var choice = choicePanel.getForm().getValues().rb;
+                        var replicates = Ext.getCmp('replicates').value;
+                        var measure_auc = Ext.getCmp('measure_auc').value;
+                        var calculate_matrix = Ext.getCmp('calculate_matrix').value;
+                        var threshold = Ext.getCmp('threshold').value;
+                        var fixed_threshold = Ext.getCmp('fixed_threshold').value;
+                        var retval_measure_auc = "no";
+                        var retval_calculate_matrix = "no";
+                        var retval_threshold = "0.5";
+                        var num_points = parseInt(retVal.returnValue.num_points);
+                        if ( choice == 'xval' ) {
+                           var replicates_int = parseInt(replicates);
+                           if ( replicates_int < 1 ) {
+                             alert("The number of replicates must be greater than zero!");
+                             return;
+                           }
+                           if ( replicates_int > 30 ) {
+                             alert("The maximum number of replicates is 30!");
+                             return;
+                           }
+                           if ( num_points < replicates_int ) {
+                             alert("The number of points ("+num_points.toString() +") cannot be smaller than the number of replicates!");
+                             return;
+                           }
+                           if ( !(measure_auc) && !(calculate_matrix) ) {
+                             alert("You need to choose one of the possible measurements: AUC or confusion matrix!");
+                             return;
+                           }
+                           if ( calculate_matrix ) {
+                             retval_threshold = threshold;
+                             if ( threshold == null ) {
+                               alert("Please choose a thresholding strategy!");
+                               return;
+                             }
+                             if ( threshold == "fixed" ) {
+                               retval_threshold = fixed_threshold;
+                               var vt = parseFloat(fixed_threshold);
+                               if ( vt >= 0.0 && vt <= 1.0 ) {
+                                 // OK!
+                               }
+                               else {
+                                 alert("Fixed thresholds must be between 0.0 and 1.0!");
+                                 return;
+                               }
+                             }
+                           }
+                          retval_measure_auc = ( measure_auc ) ? "yes": "no";
+                          retval_calculate_matrix = ( calculate_matrix ) ? "yes": "no";
+                        }
+                        pmrpc.call({
+                        destination : "publish",
+                        publicProcedureName : "reply",
+                        params : ["OK",
+                                  {"choice" : choice,
+                                   "replicates" : replicates,
+                                   "measure_auc": retval_measure_auc,
+                                   "calculate_matrix": retval_calculate_matrix,
+                                   "threshold": retval_threshold
+                                   }],
+                        onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                        onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                        });
+                }
+            }
+	    }]
+      });
+      var thresholds = Ext.create('Ext.data.Store', {
+          fields: ['id', 'label'],
+          data : [
+              {"id":"fixed", "label":"Fixed value"},
+              {"id":"lpt", "label":"Lowest Presence (LPT)"},
+          ]
+      });
+      var paramsPanel = new Ext.form.Panel({
+                id: 'params_panel',
+                title: 'Parameters',
+                region:'center',
+                bodyPadding: 10,
+                items: [{
+                  xtype: 'textfield',
+                  id: 'replicates',
+                  name: 'replicates',
+                  fieldLabel: 'Replicates',
+                  value: '10',
+                  size: 2,
+                  maxLength: 3,
+                },{
+                  xtype: 'checkboxfield',
+                  boxLabel: 'Measure AUC',
+                  name: 'measure_auc',
+                  inputValue: '1',
+                  id: 'measure_auc',
+                  checked: true,
+                 },{
+                  xtype: 'checkboxfield',
+                  boxLabel: 'Calculate omission',
+                  name: 'calculate_matrix',
+                  inputValue: '1',
+                  id: 'calculate_matrix',
+                  checked: true,
+                  listeners: {
+                    change: function(obj, value) {
+                        if (value) {
+                          var threshold = Ext.getCmp('threshold');
+                          threshold.setVisible(true);
+                          if (threshold.value == "fixed") {
+                            Ext.getCmp('fixed_threshold').setVisible(true);
+                          }
+                          else {
+                            Ext.getCmp('fixed_threshold').setVisible(false);
+                          }
+                        }
+                        else {
+                          Ext.getCmp('threshold').setVisible(false);
+                          Ext.getCmp('fixed_threshold').setVisible(false);
+                        }
+                    },
+                  },
+                },{
+                  xtype: 'combo',
+                  fieldLabel: 'Threshold',
+                  id: 'threshold',
+                  store: thresholds,
+                  queryMode: 'local',
+                  displayField: 'label',
+                  valueField: 'id',
+                  listeners: {
+                    change: function(obj, value) {
+                        if (value == "fixed") {
+                          Ext.getCmp('fixed_threshold').setVisible(true);
+                        }
+                        else {
+                          Ext.getCmp('fixed_threshold').setVisible(false);
+                        }
+                    },
+                  },
+                },{
+                  xtype: 'textfield',
+                  id: 'fixed_threshold',
+                  name: 'fixed_threshold',
+                  fieldLabel: 'Threshold value',
+                  value: '0.5',
+                  size: 3,
+                  maxLength: 3,
+                },],
+      });
+      var viewport = Ext.create('Ext.container.Viewport', {
+          id: 'viewport',
+          layout: 'border',
+          padding: 10,
+          items: [choicePanel, paramsPanel]
+      });
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+</body>
+</html>

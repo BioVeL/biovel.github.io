@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <title>Test results</title>
+
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css" href="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript" src="http://biovel.googlecode.com/svn/trunk/javascript/sencha/ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.window.MessageBox',
+]);
+    </script>
+
+    <!-- It is necessary to use a local copy of pmrpc to get this working with MSIE! -->
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['External test']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+     var choices = [];
+     choices.push({ boxLabel: 'Cross validation', name: 'rb', inputValue: 'xval', checked: false});
+     choices.push({ boxLabel: 'Skip external test', name: 'rb', inputValue: 'none', checked: true});
+     var choices_ctrl = {
+          id: 'choices_ctrl',
+          xtype: 'radiogroup',
+          columns: 1,
+          vertical: true,
+          items: choices,
+          listeners: {
+            change: function(obj, value) {
+              // check if cross validation was clicked
+              if (value.rb == 'xval') {
+                Ext.getCmp('replicates_field').setVisible(true);
+                //Ext.getCmp('auc_field').setVisible(true);
+              }
+	      else {
+                Ext.getCmp('replicates_field').setVisible(false);
+                Ext.getCmp('auc_field').setVisible(false);
+	      }
+            },
+            beforeRender: function() {
+                Ext.getCmp('replicates_field').setVisible(false);
+                Ext.getCmp('auc_field').setVisible(false);
+            },
+          }
+    }
+     var choicePanel = new Ext.form.Panel({
+        id: 'choice_panel',
+        title: 'Choose an option for external testing',
+        width: 400,
+        autoHeight: true,
+        bodyPadding: 10,
+        autoScroll: true,
+        region:'west',
+        items:[choices_ctrl],
+        dockedItems: [{
+            dock : 'bottom',
+            xtype: 'toolbar',
+            items: {
+                text: 'Continue',
+                handler: function(){
+                        var choice = choicePanel.getForm().getValues().rb;
+                        var replicates = Ext.getCmp('replicates_field').value;
+                        var num_points = parseInt(retVal.returnValue.num_points);
+                        if ( choice == 'xval' ) {
+                           var replicates_int = parseInt(replicates);
+                           if ( replicates_int < 1 ) {
+                             alert("The number of replicates must be greater than zero!");
+                             return;
+                           }
+                           if ( replicates_int > 30 ) {
+                             alert("The maximum number of replicates is 30!");
+                             return;
+                           }
+                           if ( num_points < replicates_int ) {
+                             alert("The number of points ("+num_points.toString() +") cannot be smaller than the number of replicates!");
+                             return;
+                           }
+                        }
+                        pmrpc.call({
+                        destination : "publish",
+                        publicProcedureName : "reply",
+                        params : ["OK",
+                                  {"choice" : choice,
+                                   "replicates" : replicates }],
+                        onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                        onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                        });
+                }
+            }
+	    }]
+      });
+      var paramsPanel = new Ext.form.Panel({
+                id: 'params_panel',
+                title: 'Parameters',
+                region:'center',
+                bodyPadding: 10,
+                items: [{
+                  xtype: 'textfield',
+		  id: 'replicates_field',
+                  name: 'replicates',
+                  fieldLabel: 'Replicates',
+                  value: '10',
+		  size: 2,
+		  maxLength: 3,
+                },
+               {
+                  xtype: 'fieldcontainer',
+                  id   : 'auc_field',
+                  fieldLabel: '',
+                  defaultType: 'checkboxfield',
+                  items: [
+                  {
+                    boxLabel  : 'Calculate AUC',
+                    name      : 'auc',
+                    inputValue: '1',
+                    id        : 'auc',
+		    checked   : true,
+                  }]
+                },
+                ],
+      });
+      var viewport = Ext.create('Ext.container.Viewport', {
+          id: 'viewport',
+          layout: 'border',
+          padding: 10,
+          items: [choicePanel, paramsPanel]
+      });
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+</body>
+</html>
