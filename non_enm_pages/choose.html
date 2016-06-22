@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+  <head>
+      <title></title>
+  </head>
+  <body>
+
+       <script type="text/javascript" src="pmrpc.js"></script>
+
+       <script type="text/javascript">
+
+         function reply() {
+          pmrpc.call({
+             destination : "publish",
+             publicProcedureName : "reply",
+             params : ["OK", {"answer" : GetSelectedItem()}],
+             onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+             onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+          });
+        return true;
+         }
+         
+         function GetSelectedItem() {
+           chosen = ""
+           len = document.myform.group.length
+           for (i = 0; i <len; i++) {
+             if (document.myform.group[i].checked) {
+               chosen = document.myform.group[i].value
+             }
+           }
+
+           if (chosen == "") {
+             alert("No Location Chosen")
+           }
+              return chosen;
+           }
+
+         function cancel() {
+          pmrpc.call({
+             destination : "publish",
+             publicProcedureName : "reply",
+             params : ["Cancelled", {}],
+             onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Cancelled</h1>';},
+             onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Cancellation failed</h1>';}
+          });
+        return true;
+         }
+         
+        function readInputValues() {
+          pmrpc.call( {
+            destination : "publish",
+            publicProcedureName : "getWorkflowRunId",
+            params : [],
+            onSuccess : function(retVal) {
+               h2List=document.getElementsByTagName('h2');
+               for (i = 0; i < h2List.length; i++) {
+                 h2List[i].innerHTML = 'Interaction from workflow run ' + retVal.returnValue;
+               }
+            }
+          });
+          pmrpc.call({
+             destination : "publish",
+             publicProcedureName : "getInputData",
+             params : [],
+             onSuccess : function(retVal) {
+               selectionValues = retVal.returnValue.selectionValues;
+	       theForm = document.getElementsByTagName('form')[0];
+               for (i = 0; i < selectionValues.length; i++) {
+                 choice = selectionValues[i];
+		 theLabel = document.createElement('label');
+                 theLabel.appendChild(document.createTextNode(choice));
+                 theInput = document.createElement('input');
+                 theInput.setAttribute('type', 'radio');
+                 theInput.setAttribute('name', 'group');
+                 theInput.setAttribute('value', choice);
+		 theLabel.appendChild(theInput);
+                 theForm.appendChild(theLabel);
+		 theForm.appendChild(document.createElement('br'));
+               }
+	       theInput = document.createElement('input');
+	       theInput.type = "button";
+	       theInput.value = "Cancel";
+	       theInput.setAttribute('onclick', 'cancel()');
+	       theForm.appendChild(theInput);
+	       theInput = document.createElement('input');
+	       theInput.type = "button";
+	       theInput.value = "Submit";
+	       theInput.setAttribute('onclick', 'reply()');;
+	       theForm.appendChild(theInput);
+	       theForm.appendChild(document.createElement('br'));
+	       theForm.normalize();
+             }
+          });
+          return true;
+         }
+         
+         window.onload = readInputValues;
+       </script>
+  
+  <h2></h2>
+<form name="myform">
+</form> 
+  </body>
+</html>
+

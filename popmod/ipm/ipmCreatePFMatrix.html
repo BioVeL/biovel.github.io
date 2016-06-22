@@ -1,0 +1,103 @@
+<html>
+<head>
+	<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.24/themes/smoothness/jquery-ui.css" type="text/css" media="all" />
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.24/jquery-ui.min.js"></script>
+</head>
+<body class="ui-widget">
+	<div style="float:right"><button id="nextButton" disabled="true">Next</button></div>
+	<h1>Create IPM Matrix</h1>
+	<p>Here you can construct the IPM, run diagnostics of the P matrix, and plot P and F matrices</p>
+	<div id="message"></div>
+	<div style="clear:both"></div>
+	<div id="control" class="ui-widget">
+		<table style="float:left">
+			<tr>
+				<td><label for="matrixDim">Matrix Dimensions</label></td>
+				<td><input id="matrixDim" type="text"></td>
+			</tr>
+			<tr>
+				<td><label for="minSize">Min Size</label></td>
+				<td><input id="minSize" type="text"></td>
+			</tr>
+			<tr>
+				<td><label for="maxSize">Max Size</label></td>
+				<td><input id="maxSize" type="text"></td>
+			</tr>
+		</table>
+		<table style="float:left">
+			<tr>
+				<td><label for="correction">Correction</label></td>
+				<td><select id="correction">
+					<option>none</option>
+					<option selected="true">constant</option>
+					<option>discretizeExtremes</option>
+				</select></td>
+			</tr>
+			<tr>
+				<td><label for="integrateType">Integrate Type</label></td>
+				<td><select id="integrateType">
+					<option value="midpoint" selected="true">probability density function (midpoint)</option>
+					<option value="cumul">cumulative density function (cumul)</option>
+				</select></td>
+			</tr>
+			<tr>
+				<td><label for="preCensus">Pre-census</label></td>
+				<td><input id="preCensus" type="checkbox" name="preCensus">(F matrix only)</td>
+			</tr>
+		</table>
+		<button id="createButton" disabled="true" style="float:left">Plot All</button>
+		<div style="clear:both"></div>
+	</div>
+	<div id="tabs">
+		<ul>
+			<li><a href="#pmatrix">P Matrix<span id="pload" style="position:absolute; top:0; right:0" /></a></li>
+			<li><a href="#fmatrix">F Matrix<span id="fload" style="position:absolute; top:0; right:0" /></a></li>
+		</ul>
+		<div id="pmatrix">
+			<div class="contour" style="float:right"></div>
+			<div class="control">
+				<label for="pmatrixColours">Colours</label>
+				<select id="pmatrixColours">
+					<option value="heat.colors">heat</option>
+					<option value="rainbow">rainbow</option>
+					<option value="terrain.colors">terrain</option>
+					<option value="topo.colors" selected="true">topo</option>
+					<option value="cm.colors">contour</option>
+				</select>
+				<br>
+				<button id="pmatrixUpdateButton" disabled="true">Update</button>
+			</div>
+			<div class="wireframe"></div>
+			<div style="clear:both"></div>
+			<div style="border:2px dotted lightblue">
+				<h3>Diagnostics of P matrix</h3>
+				<div class="diagnostics"></div>
+			</div>
+			<div class="text"></div>
+		</div>
+		<div id="fmatrix">
+			<div class="contour" style="float:right"></div>
+			<div class="control">
+				<label for="fmatrixColours">Colours</label>
+				<select id="fmatrixColours">
+					<option value="heat.colors">heat</option>
+					<option value="rainbow">rainbow</option>
+					<option value="terrain.colors">terrain</option>
+					<option value="topo.colors" selected="true">topo</option>
+					<option value="cm.colors">contour</option>
+				</select>
+				<br>
+				<button id="fmatrixUpdateButton" disabled="true">Update</button>
+			</div>
+			<div class="wireframe"></div>
+			<div style="clear:both"></div>
+			<div class="text"></div>
+		</div>
+	</div>
+	<script src="/svn/trunk/javascript/pmrpc/0.7.1/pmrpc.js"></script>
+	<script src="DataRepository.js"></script>
+	<script src="OpenCPU.js"></script>
+	<script src="ipmCreatePFMatrix.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <title>Tree Example</title>
+
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+
+function getInputDataSuccess(retVal) {
+      var prompt = retVal.returnValue.prompt;
+
+      var promptElement = document.getElementById("prompt");
+      promptElement.innerHTML = prompt;
+
+}
+
+function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['Select file contents']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+      getInputDataSuccess(retVal);
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+function handleFileSelection() {
+  var f = document.getElementById("fileInput").files[0];
+
+  var body = document.getElementById("body");
+
+  var reader = new FileReader();
+
+  reader.onload = (function(theFile) {
+        return function(e) {
+          var text = e.target.result;
+          pmrpc.call({
+            destination : "publish",
+            publicProcedureName : "reply",
+            params : ["OK",
+              {"file_contents" : text}],
+            onSuccess : function() {body.innerHTML = 'Data submitted';},
+            onFailure: function() {body.innerHTML = 'Data submission failed';}
+           });
+        };
+      })(f);
+
+      // Read in the image file as a data URL.
+  reader.readAsText(f);
+
+
+}
+
+window.onload = function() {
+  readInputValues();
+};
+
+</script>
+
+</head>
+<body id="body">
+
+    <h1 id="prompt"></h1>
+    <div id="form-div">
+      <form action="/" method="post" onsubmit="return upload();">
+       <fieldset>
+       <input type="file" name="fileInput" id="fileInput" onchange="handleFileSelection()"/>
+    </fieldset>
+    </form>
+    </div>
+</body>
+</html>
+

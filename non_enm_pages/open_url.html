@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <title>Select options</title>
+
+    <link rel="stylesheet" type="text/css"
+    href="ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css"
+    href="ext-4.0.7-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript"
+    src="ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+var datasubmitted = false;
+
+function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['Open URL']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+      var targetUrl = retVal.returnValue.destination;
+      window.location.replace(targetUrl);
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+
+    <h1>Open URL</h1>
+    <div id="text">
+      </p>
+    </div>
+    <div id="form-div"></div>
+</body>
+</html>

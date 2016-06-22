@@ -1,0 +1,152 @@
+<html>
+<head>
+<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.24/themes/smoothness/jquery-ui.css" type="text/css" media="all" />
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.24/jquery-ui.min.js"></script>
+</head>
+<body class="ui-widget">
+	<h1>Create Vital Rates</h1>
+	<p>Here you can plot functional forms, scores and select models</p>
+<div id="tabs">
+  <ul>
+	<li><a href="#data">Data<span id="dataload" style="position:absolute; top:0; right:0" /></a></li>
+	<li><a href="#srvl">Survival<span id="srvlload" style="position:absolute; top:0; right:0" /></a></li>
+	<li><a href="#grow">Growth<span id="growload" style="position:absolute; top:0; right:0" /></a></li>
+	<li><a href="#fcnd">Fecundity<span id="fcndload" style="position:absolute; top:0; right:0" /></a></li>
+	<li><a href="#sbmt">Submit<span id="sbmtload" style="position:absolute; top:0; right:0" /></a></li>
+  </ul>
+  <div id="data"><p>Loading...</p></div>
+  <div id="srvl">
+	<p>Survival analysis predicts the probability of surviving at a given size.</p>
+    <div style="border:2px dotted lightblue">
+		<p>Relation between survival and size. Dots are observed values of survival.</p>
+		<div id="survivalInitialPlot"></div>
+	</div>
+	<div id="survivalComparisonPlot" style="float:right"></div>
+	<p>First, compare model fits for survival with different linear combinations. 
+	Please select the
+	<a href="http://en.wikipedia.org/wiki/Bayesian_information_criterion" target="_blank">Bayesian Information criterion (BIC)</a>
+	or the 
+	<a href="http://en.wikipedia.org/wiki/Akaike_information_criterion" target="_blank">Akaike Information Criterion (AIC)</a> 
+	to compare the different linear models.</p>
+	<div id="survivalControl">
+	  <select id="survivalControlTestType">
+		<option selected="true">AIC</option>
+		<option>BIC</option>
+	  </select>
+	  <button id="survivalControlCompare" disabled="true">Compare</button>
+	</div>
+	<p>Select the best fit for the survival probability based on biological criteria and / or the AIC
+	or BIC
+	values.</p>
+	<div id="survivalComparisonChoice"></div>
+	<p>Once you have selected your preferred linear model, click <button id="survivalControlSubmit" type="button" disabled="true">Submit</button></p>
+    <div style="clear:both"></div>
+	
+  </div>
+  <div id="grow">
+	<p>Growth analysis predicts the probability of growing at a given size.</p>
+    <div style="border:2px dotted lightblue">
+		<p>Size-dependent pattern.</p>
+		<div id="growthInitialPlot"></div>
+	</div>
+	<div id="growthComparisonPlot" style="float:right"></div>
+	<p>First, compare model fits for growth with different linear combinations. 
+	Please select the
+	<a href="http://en.wikipedia.org/wiki/Bayesian_information_criterion" target="_blank">Bayesian Information criterion (BIC)</a>
+	or the 
+	<a href="http://en.wikipedia.org/wiki/Akaike_information_criterion" target="_blank">Akaike Information Criterion (AIC)</a> 
+	to compare the different linear models.</p>
+	<div id="growthControl">
+	  <select id="growthControlTestType">
+		<option selected="true">AIC</option>
+		<option>BIC</option>
+	  </select>
+      <button id="growthControlCompare" disabled="true">Compare</button>
+	</div>
+	<p>Select the best fit for the growth probability based on biological criteria and / or the AIC
+	or BIC
+	values.</p>
+	<div id="growthComparisonChoice"></div>
+	<p>Once you have selected your preferred linear model, click <button id="growthControlSubmit" type="button" disabled="true">Submit</button></p>
+    <div style="clear:both"></div>
+  </div>
+  <div id="fcnd">
+    <p id="fecundityMessage"></p>
+    <p>Fecundity analysis predicts the probability of flowering/fruiting at a given size.</p>
+    <div style="border:2px dotted lightblue">
+		<p>Fecundity Patterns</p>
+		<div id="fecundityInitial"></div>
+	</div>
+	<div id="fecundityPlot" style="float:right"></div>
+    <p>Analyse and plot each fecundity data field with a suitable family and transform.</p> 
+    <div id="fecundityControl">
+	  <form>
+        <label for="fecundityControlField">Field</label>
+        <select id="fecundityControlField" disabled="true">
+          <option>Loading...</option>
+		</select>
+		<br>
+        <label for="fecundityControlFamily">Family</label>
+        <select id="fecundityControlFamily">
+          <option selected="true">binomial</option>
+		  <!-- <option disabled="true">gaussian</option> -->
+		  <!-- <option disabled="true">gamma</option> -->
+		  <!-- <option disabled="true">inverse.gaussian</option> -->
+		  <option>poisson</option>
+		  <!-- <option disabled="true">quasi</option> -->
+		  <!-- <option disabled="true">quasibinomial</option> -->
+		  <!-- <option disabled="true">quasipoisson</option> -->
+		</select>
+		<br>
+        <label for="fecundityControlTransform">Transform</label>
+        <select id="fecundityControlTransform">
+          <option selected="true">none</option>
+          <option>sqrt</option>
+          <option>log</option>
+		</select>
+		<br>
+		<button id="fecundityControlPlot" type="button" disabled="true">Plot</button>
+	  </form>
+	</div>
+     <p>Add the preferred fit.</p>
+	<div id="fecundityChoice"></div>
+    <div id="fecundityPath"></div>
+     <p>Repeat to analyse and plot any further fecundity data.</p> 
+     <p>When finished, click <button id="fecundityControlSubmit" type="button" disabled="true">Submit</button></p>
+    <div style="clear:both"></div>
+  </div>
+  <div id="sbmt">
+	<button id="submitButton" type="button" disabled="true" style="float:right">Submit</button>
+	<div id="submitMessage"></div>
+	<div id="submitSurvivalMessage"></div>
+	<div id="submitGrowthMessage"></div>
+	<div id="submitFecundityMessage"></div>
+    <div style="clear:both"></div>
+	<div id="submitSurvival" style="border:2px dotted lightblue">
+		<h2>Survival</h2>
+		<p>Graph and details of chosen linear model</p>
+		<div class="plot" style="float:left"></div>
+		<div class="text" style="float:left"></div>
+		<div style="clear:both"></div>
+	</div>
+	<div id="submitGrowth" style="border:2px dotted lightblue">
+		<h2>Growth</h2>
+		<p>Graph and details of chosen linear model</p>
+		<div class="plot" style="float:left"></div>
+		<div class="text" style="float:left"></div>
+		<div style="clear:both"></div>
+	</div>
+	<div id="submitFecundity" style="border:2px dotted lightblue">
+		<h2>Fecundity</h2>
+		<p>Graphs and details of chosen linear models</p>
+		<div class="content"></div>
+	</div>
+  </div>
+</div>
+<script src="/svn/trunk/javascript/pmrpc/0.7.1p1/pmrpc.js"></script>
+<script src="DataRepository.js"></script>
+<script src="OpenCPU.js"></script>
+<script src="ipmSelectSGF.js"></script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <title>Select environmental layers</title>
+
+    <link rel="stylesheet" type="text/css" href="http://cdn.sencha.io/ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css" href="http://cdn.sencha.io/ext-4.0.7-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript" src="http://cdn.sencha.io/ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.tree.*',
+    'Ext.data.*',
+    'Ext.data.NodeInterface',
+    'Ext.window.MessageBox',
+    'Ext.DomQuery'
+]);
+    </script>
+
+
+<style type="text/css">
+ .x-tree-icon-parent, .x-tree-icon-leaf {width: 2px; background-image:none}
+</style>
+        
+    <!-- It is necessary to use a local copy of pmrpc to get this working with MSIE! -->
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+var parseXml;
+
+if (typeof window.DOMParser != "undefined") {
+    parseXml = function(xmlStr) {
+        return ( new window.DOMParser() ).parseFromString(xmlStr,
+    "text/xml");
+    };
+} else if (typeof window.ActiveXObject != "undefined" &&
+       new window.ActiveXObject("Microsoft.XMLDOM")) {
+        parseXml = function(xmlStr) {
+            var xmlDoc = new window.ActiveXObject("Microsoft.XMLDOM");
+            xmlDoc.async = "false";
+            xmlDoc.loadXML(xmlStr);
+            return xmlDoc;
+        };
+} else {
+    throw new Error("No XML parser found");
+}
+
+function processSTIFWorkspace (parent, xmlElement, layer_map) {
+  var children = xmlElement.childNodes;
+  var first = true;
+  for (var i = 0; i < children.length; i++) {
+    var childNode = children[i];
+    if (childNode.tagName == 'layer') {
+      var workspaceParent;
+      var name = Ext.DomQuery.selectNode('name', childNode).childNodes[0].textContent;
+      var url = Ext.DomQuery.selectNode('url', childNode).childNodes[0].textContent;
+      var nameParts = name.split(":");
+      if (first == true) {
+        // add parent
+        workspaceParent = parent.appendChild({expanded : true,
+                                              text : nameParts[0],
+                                              id : nameParts[0]});
+        first = false;
+      }
+      // add layer
+      var newChildDetails = {checked : false,
+                             text : nameParts[1],
+                             leaf : true,
+                             id : name};
+      layer_map[name] = name;
+      workspaceParent.appendChild(newChildDetails);
+    }
+  }
+}
+
+function processSTIFWorkspaces(rootNode, stifWorkspaces, layer_map) {
+   
+   var newParent = rootNode.appendChild({expanded : true,
+                         text : 'BioSTIF',
+                          id : 'BioSTIF'});
+       for (var i = 0; i < stifWorkspaces.length; i++) {
+         processSTIFWorkspace (newParent, parseXml(stifWorkspaces[i]).documentElement,
+                       layer_map);
+       }
+}
+
+function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['Select layer']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+       treeRoot = new Ext.data.NodeInterface({text : 'Root', id : '1', leaf: false});
+       var store = Ext.create('Ext.data.TreeStore', {
+         root : treeRoot
+       });
+       var rootNode = store.getRootNode();
+       var layer_map = {};
+       var treePanel = Ext.create('Ext.tree.Panel', {
+         title : 'GeoServer layer selection',
+         width : 600,
+         height : 350,
+         store : store,
+         rootVisible : false,
+         renderTo : Ext.getBody(),
+         autoscroll : true,
+         cls: 'x-tree-noicon',
+         dockedItems: [{
+            dock : 'bottom',
+            xtype: 'toolbar',
+            items: [{
+                text: 'Visualize layer',
+                handler: function(){
+                            var records = treePanel.getView().getChecked();
+                            var selected_layer = '';
+                            Ext.Array.each(records, function(rec){
+                              selected_layer = rec.get('id');
+                            });
+                            pmrpc.call({
+                            destination : "publish",
+                            publicProcedureName : "reply",
+                            params : ["OK",
+                                      {"selected_layer" : selected_layer}],
+                            onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                            onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                            });
+                },
+            }]
+	    }]
+       });
+       // Avoid selecting multiple nodes
+       treePanel.on('checkchange', function(node, checked, eOpts) {
+            var checked_id = node.get('id');
+            var checked_nodes = this.getView().getChecked();
+            Ext.Array.each(checked_nodes, function(mynode){
+              if (mynode.get('id') != checked_id) {
+                mynode.set('checked',false);
+              }
+            });
+       }); 
+       var stifWorkspaces = retVal.returnValue.stifWorkspaces;
+       processSTIFWorkspaces(rootNode, stifWorkspaces, layer_map);
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+</body>
+</html>

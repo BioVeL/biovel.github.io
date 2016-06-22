@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+  <head>
+      <title></title>
+    <link rel="stylesheet" type="text/css"
+    href="ext-4.1.0-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css"
+    href="ext-4.1,0-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript"
+    src="ext-4.1.0-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.tree.*',
+    'Ext.data.*',
+    'Ext.data.NodeInterface',
+    'Ext.window.MessageBox',
+    'Ext.DomQuery'
+]);
+    </script>
+
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+      function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['Accept or change bounding box']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+      var entries = [];
+      entries.push({xtype: 'textfield',
+          name: 'minlat',
+          fieldLabel: 'Minimum latitude',
+          allowBlank: false,
+          value: retVal.returnValue.minlat,
+          labelWidth: 300,
+          width: 700});
+      entries.push({xtype: 'textfield',
+          name: 'maxlat',
+          fieldLabel: 'Maximum latitude',
+          allowBlank: false,
+          value: retVal.returnValue.maxlat,
+          labelWidth: 300,
+          width: 700});
+      entries.push({xtype: 'textfield',
+          name: 'minlong',
+          fieldLabel: 'Minimum longitude',
+          allowBlank: false,
+          value: retVal.returnValue.minlong,
+          labelWidth: 300,
+          width: 700});
+      entries.push({xtype: 'textfield',
+          name: 'maxlong',
+          fieldLabel: 'Maximum longitude',
+          allowBlank: false,
+          value: retVal.returnValue.maxlong,
+          labelWidth: 300,
+          width: 700});
+      var formPanel = Ext.create('Ext.form.Panel', {
+        title: 'Bounding box',
+        width: 800,
+        height: 525,
+        bodyPadding: 10,
+        renderTo: Ext.getBody(),
+        autoScroll: true,
+        items:entries,
+	 dockedItems: [{
+            dock : 'bottom',
+            xtype: 'toolbar',
+            items: {
+	    text: 'Set bounding box',
+	    handler: function(){
+              var formValues = formPanel.getForm().getValues();
+              var answer = 0;
+              if ((formValues['minlat'] !=
+          retVal.returnValue.minlat) ||
+                  (formValues['maxlat'] != retVal.returnValue.maxlat) ||
+                  (formValues['minlong'] != retVal.returnValue.minlong) ||
+                  (formValues['maxlong'] !=
+          retVal.returnValue.maxlong)) {
+	        answer = -1;
+              }
+                    pmrpc.call({
+                    destination : "publish",
+                    publicProcedureName : "reply",
+                    params : ["OK",
+                              {'answer' : answer,
+                               'minlat' : formValues['minlat'],
+                               'maxlat' : formValues['maxlat'],
+                               'minlong' : formValues['minlong'],
+                               'maxlong' : formValues['maxlong']}],
+                    onSuccess : function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submitted</h1>';},
+                    onFailure: function() {document.getElementsByTagName('body')[0].innerHTML='<h1>Data submission failed</h1>';}
+                    });
+            }
+            }
+	    }]
+      });
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+  </head>
+  <body>
+  </body>
+</html>
+

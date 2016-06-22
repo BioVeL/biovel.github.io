@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <title>Select profile</title>
+
+    <link rel="stylesheet" type="text/css"
+    href="ext-4.0.7-gpl/resources/css/ext-all.css" />
+    <link rel="stylesheet" type="text/css"
+    href="ext-4.0.7-gpl/examples/shared/example.css" />
+
+    <script type="text/javascript"
+    src="ext-4.0.7-gpl/bootstrap.js"></script>
+
+    <script type="text/javascript">
+Ext.require([
+    'Ext.tree.*',
+    'Ext.data.*',
+    'Ext.data.NodeInterface',
+    'Ext.window.MessageBox',
+    'Ext.DomQuery'
+]);
+    </script>
+
+    <script type="text/javascript" src="pmrpc.js"></script>
+
+    <script type="text/javascript">
+
+
+Ext.override(Ext.form.Checkbox, {
+        onClick : function(){            
+            if(this.el.dom.checked != this.checked){
+                var p = this.el.up('form') || Ext.getBody();
+                var els = p.select('input[name='+this.el.dom.name+']');
+                els.each(function(el){
+                    if(el.dom.id == this.id){
+                        this.setValue(true);
+                    }else{
+                        Ext.getCmp(el.dom.id).setValue(false);
+                    }
+                }, this);
+            }
+        }
+    });
+
+var parseXml;
+
+if (typeof window.DOMParser != "undefined") {
+    parseXml = function(xmlStr) {
+        return ( new window.DOMParser() ).parseFromString(xmlStr,
+    "text/xml");
+    };
+} else if (typeof window.ActiveXObject != "undefined" &&
+       new window.ActiveXObject("Microsoft.XMLDOM")) {
+    parseXml = function(xmlStr) {
+        var xmlDoc = new window.ActiveXObject("Microsoft.XMLDOM");
+        xmlDoc.async = "false";
+        xmlDoc.loadXML(xmlStr);
+        return xmlDoc;
+    };
+} else {
+    throw new Error("No XML parser found");
+}
+
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+var datasubmitted = false;
+
+var comboBox;
+
+var iframeComponent = Ext.create('Ext.Component',
+    {
+    id : 'iframe-component',
+    width: 750,
+    height: 500,
+    autoEl: { tag: "iframe", id: 'myframe', src: "http://www.mygrid.org.uk"}});
+
+function setProfile(p) {
+    document.getElementById('iframe-component').src = "http://pfam.sanger.ac.uk/family/" + p;
+}
+
+function readInputValues() {
+          pmrpc.call({
+            destination: 'publish',
+            publicProcedureName: 'setTitle',
+            params: ['Select profile']
+          });
+  pmrpc.call({
+    destination : "publish",
+    publicProcedureName : "getInputData",
+    params : [],
+    onSuccess : function(retVal) {
+      var profiles = retVal.returnValue.profiles;
+      comboBox = Ext.create('Ext.form.ComboBox', {
+        fieldLabel: 'Profile',
+        width: 380,
+        editable: false,
+        store: profiles,
+        listeners: {
+          select: function(combo, record, index) {
+            setProfile(combo.value);
+          }
+        }
+      });
+      var theButton = Ext.create ('Ext.Button', {
+	    text: 'Submit profile',
+	    handler: function(){
+	      if (datasubmitted) {
+                alert ('Data already submitted');
+              }
+              else {
+                    datasubmitted = true;
+                    pmrpc.call({
+                    destination : "publish",
+                    publicProcedureName : "reply",
+                    params : ["OK",
+                              {"profile" : comboBox.getValue()}],
+                    onSuccess : function() {theButton.setText('Data submitted'); theButton.disable();},
+                    onFailure: function() {theButton.setText('Data submission failed'); theButton.disable();}
+                    });
+              }
+            }
+      });
+      var formPanel = Ext.create('Ext.form.Panel', {
+        title: 'Profile selection',
+        width: 800,
+        height: 525,
+        bodyPadding: 10,
+        renderTo: Ext.getBody(),
+        autoScroll: true,
+        items:[comboBox, iframeComponent],
+	 dockedItems: [{
+            dock : 'bottom',
+            xtype: 'toolbar',
+            items: theButton
+	    }]
+      });
+      comboBox.setValue(profiles[0]);
+      setProfile(profiles[0]);
+    },
+   onFailure : function() {
+     alert('Reading of input data failed');
+   }
+})};
+
+Ext.onReady(function() {
+  readInputValues();
+});
+
+</script>
+
+</head>
+<body>
+
+    <h1>Profile selection</h1>
+    <div id="text">
+      </p>
+    </div>
+    <div id="form-div"></div>
+</body>
+</html>
